@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Guess the Dandy's World Item</title>
+<style>
+:root {
+  --bg: #0d0f1a;
+  --card: #161a2e;
+  --card-2: #1f2440;
+  --accent: #5b8dff;
+  --accent-2: #b66bff;
+  --danger: #ff6b81;
+  --good: #4ade80;
+  --text: #e6e8f2;
+  --muted: #8b90ad;
+  --slot: #2a2f4f;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; background: #000; color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  min-height: 100%; overscroll-behavior: none;
+}
+body {
+  display: flex; justify-content: center; min-height: 100vh;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #2a1b5e 0%, transparent 60%),
+    radial-gradient(800px 600px at 50% 110%, #5e1b46 0%, transparent 55%),
+    #050616;
+}
+.phone {
+  width: 100%; max-width: 420px; min-height: 100vh;
+  background: linear-gradient(180deg, #0d0f1a 0%, #11132a 100%);
+  display: flex; flex-direction: column;
+  padding: 10px 12px 14px; gap: 8px; position: relative;
+}
+.hud { display: flex; justify-content: center; padding: 2px 4px; }
+.stat { text-align: center; }
+.stat .value {
+  font-size: 22px; font-weight: 800; letter-spacing: 0.5px; line-height: 1; min-height: 22px;
+  background: linear-gradient(180deg, #fff, #aab3ff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.stat .label { font-size: 9px; letter-spacing: 1.5px; color: var(--muted); margin-top: 4px; }
+#strikes { display: flex; gap: 5px; justify-content: center; }
+.strike {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.18); box-sizing: border-box;
+  transition: transform 0.15s, background 0.2s, border-color 0.2s;
+}
+.strike.used {
+  background: var(--danger); border-color: var(--danger);
+  transform: scale(1.1);
+}
+
+.image-card {
+  background: linear-gradient(180deg, var(--card) 0%, var(--card-2) 100%);
+  border-radius: 14px; padding: 8px;
+  display: flex; flex-direction: column; gap: 6px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+.image-wrap {
+  width: 100%; aspect-ratio: 1 / 1;
+  background: radial-gradient(circle at 50% 40%, #2a2f55 0%, #0e1024 80%);
+  border-radius: 10px; display: grid; place-items: center;
+  overflow: hidden; position: relative; padding: 16px;
+}
+#item-image {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgba(0,0,0,0.5));
+  image-rendering: -webkit-optimize-contrast;
+}
+.image-overlay { position: absolute; inset: 0; pointer-events: none; }
+
+.word-area { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 2px 0; }
+.word { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: center; max-width: 100%; }
+.word-group { display: flex; gap: 4px; flex-wrap: nowrap; }
+.slot {
+  width: 24px; height: 30px;
+  display: grid; place-items: center;
+  background: var(--slot); border-radius: 5px;
+  font-weight: 800; font-size: 16px; text-transform: uppercase;
+  color: var(--text); border-bottom: 2px solid rgba(0,0,0,0.35);
+  transition: transform 0.15s, background 0.2s;
+}
+.slot.revealed {
+  background: linear-gradient(180deg, #2c4a8c, #1d3163);
+  border-bottom-color: var(--accent); transform: translateY(-2px);
+}
+.slot.space { width: 10px; background: transparent; border: none; }
+.slot.punct {
+  background: transparent; border: none;
+  width: auto; min-width: 6px;
+  align-items: flex-end; padding-bottom: 4px;
+  font-size: 20px; color: var(--text);
+}
+.meta { color: var(--muted); font-size: 11px; }
+
+.strikes-row { display: flex; justify-content: center; padding: 2px 4px; min-height: 16px; }
+
+.keyboard { display: flex; flex-direction: column; gap: 4px; }
+.kb-row { display: flex; gap: 4px; justify-content: center; }
+.key {
+  flex: 1; max-width: 34px; height: 36px; border-radius: 6px;
+  background: linear-gradient(180deg, #2a2f55, #1a1d3a);
+  color: var(--text); font-weight: 700; font-size: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.05s, background 0.2s;
+}
+.key:active { transform: scale(0.94); }
+.key.hit { background: linear-gradient(180deg, #1e6e3c, #134227); color: #b8ffd1; }
+.key.miss { background: linear-gradient(180deg, #6e1e2f, #3f111b); color: #ffb8c4; }
+.key:disabled { cursor: default; opacity: 0.85; }
+
+.actions { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+.btn {
+  border: none; border-radius: 10px; padding: 10px 14px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  letter-spacing: 0.3px; -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s, background 0.2s;
+}
+.btn:active { transform: scale(0.98); }
+.btn.primary {
+  background: linear-gradient(180deg, var(--accent) 0%, #3a6ddb 100%);
+  color: white; box-shadow: 0 6px 16px rgba(91,141,255,0.4);
+}
+.btn.ghost { background: transparent; color: var(--text); border: 1px solid rgba(255,255,255,0.18); }
+.btn.danger { background: transparent; color: var(--danger); border: 1px solid rgba(255,107,129,0.45); }
+.hidden { display: none !important; }
+
+@keyframes pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.18) translateY(-4px); }
+  100% { transform: scale(1); }
+}
+.slot.win { animation: pop 0.4s ease both; }
+
+@media (max-width: 360px) {
+  .slot { width: 20px; height: 26px; font-size: 14px; }
+  .key { max-width: 30px; height: 32px; font-size: 13px; }
+  .image-wrap { height: 150px; }
+}
+</style>
+</head>
+<body>
+  <div class="phone">
+    <header class="hud">
+      <div class="stat">
+        <div class="value" id="streak">0</div>
+        <div class="label">STREAK</div>
+      </div>
+    </header>
+
+    <section class="image-card">
+      <div class="image-wrap">
+        <img id="item-image" alt="Item to guess" />
+        <div class="image-overlay" id="image-overlay"></div>
+      </div>
+    </section>
+
+    <section class="word-area">
+      <div id="word" class="word"></div>
+      <div class="meta">
+        <span id="meta-hint">Type the item name</span>
+      </div>
+    </section>
+
+    <section class="strikes-row">
+      <div class="value" id="strikes"></div>
+    </section>
+
+    <section class="keyboard" id="keyboard"></section>
+
+    <section class="actions">
+      <button id="giveup-btn" class="btn danger">Give Up — Reveal Answer</button>
+      <button id="next-btn" class="btn primary hidden">Next Item ▶</button>
+    </section>
+  </div>
+
+  <script src="items.js"></script>
+  <script>
+(() => {
+  const MAX_WRONG = 6;
+
+  const els = {
+    img: document.getElementById('item-image'),
+    word: document.getElementById('word'),
+    keyboard: document.getElementById('keyboard'),
+    strikes: document.getElementById('strikes'),
+    streak: document.getElementById('streak'),
+    metaHint: document.getElementById('meta-hint'),
+    giveUp: document.getElementById('giveup-btn'),
+    next: document.getElementById('next-btn'),
+  };
+
+  let items = [];
+  let queue = [];
+  let current = null;
+  let revealed = new Set();
+  let guessed = new Set();
+  let wrong = 0;
+  let streak = 0;
+  let finished = false;
+
+  function renderStrikes() {
+    els.strikes.innerHTML = '';
+    for (let i = 0; i < MAX_WRONG; i++) {
+      const d = document.createElement('div');
+      d.className = 'strike' + (i < wrong ? ' used' : '');
+      els.strikes.appendChild(d);
+    }
+  }
+
+  const ROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function buildKeyboard() {
+    els.keyboard.innerHTML = '';
+    for (const row of ROWS) {
+      const r = document.createElement('div');
+      r.className = 'kb-row';
+      for (const ch of row) {
+        const btn = document.createElement('button');
+        btn.className = 'key';
+        btn.textContent = ch;
+        btn.dataset.letter = ch;
+        btn.addEventListener('click', () => onGuess(ch));
+        r.appendChild(btn);
+      }
+      els.keyboard.appendChild(r);
+    }
+  }
+
+  function setKeyState(letter, state) {
+    const btn = els.keyboard.querySelector(`[data-letter="${letter}"]`);
+    if (!btn) return;
+    btn.classList.add(state);
+    btn.disabled = true;
+  }
+
+  function renderWord() {
+    els.word.innerHTML = '';
+    const words = current.name.split(' ');
+    words.forEach((word) => {
+      const group = document.createElement('div');
+      group.className = 'word-group';
+      [...word].forEach((ch) => {
+        const upper = ch.toUpperCase();
+        const slot = document.createElement('div');
+        if (!/[A-Za-z]/.test(ch)) {
+          slot.className = 'slot punct';
+          slot.textContent = ch;
+        } else {
+          slot.className = 'slot';
+          slot.dataset.letter = upper;
+          if (revealed.has(upper)) {
+            slot.textContent = upper;
+            slot.classList.add('revealed');
+          }
+        }
+        group.appendChild(slot);
+      });
+      els.word.appendChild(group);
+    });
+  }
+
+  function uniqueLetters(name) {
+    return new Set([...name.toUpperCase()].filter(c => /[A-Z]/.test(c)));
+  }
+
+  function isWordSolved() {
+    const need = uniqueLetters(current.name);
+    for (const l of need) if (!revealed.has(l)) return false;
+    return true;
+  }
+
+  function onGuess(letter) {
+    if (finished) return;
+    letter = letter.toUpperCase();
+    if (!/[A-Z]/.test(letter)) return;
+    if (guessed.has(letter)) return;
+    guessed.add(letter);
+
+    const need = uniqueLetters(current.name);
+    if (need.has(letter)) {
+      revealed.add(letter);
+      setKeyState(letter, 'hit');
+      renderWord();
+      animateSlots(letter);
+      if (isWordSolved()) win();
+    } else {
+      wrong++;
+      setKeyState(letter, 'miss');
+      renderStrikes();
+      if (wrong >= MAX_WRONG) lose();
+    }
+  }
+
+  function animateSlots(letter) {
+    els.word.querySelectorAll(`.slot[data-letter="${letter}"]`).forEach(s => {
+      s.classList.remove('win');
+      void s.offsetWidth;
+      s.classList.add('win');
+    });
+  }
+
+  function win() {
+    finished = true;
+    streak++;
+    els.streak.textContent = streak;
+    els.metaHint.textContent = 'Correct!';
+    els.metaHint.style.color = 'var(--good)';
+    finishUI();
+  }
+
+  function lose() {
+    finished = true;
+    streak = 0;
+    els.streak.textContent = streak;
+    [...uniqueLetters(current.name)].forEach(l => revealed.add(l));
+    renderWord();
+    els.metaHint.textContent = current.name;
+    els.metaHint.style.color = 'var(--danger)';
+    finishUI();
+  }
+
+  function giveUp() {
+    if (finished) return;
+    lose();
+  }
+
+  function finishUI() {
+    els.next.classList.remove('hidden');
+    els.giveUp.classList.add('hidden');
+  }
+
+  function nextItem() {
+    if (!queue.length) queue = shuffle(items);
+    current = queue.shift();
+    revealed = new Set();
+    guessed = new Set();
+    wrong = 0;
+    finished = false;
+    els.metaHint.textContent = 'Type the item name';
+    els.metaHint.style.color = '';
+    renderStrikes();
+    els.img.src = current.image;
+    els.img.alt = 'Mystery item';
+    els.next.classList.add('hidden');
+    els.giveUp.classList.remove('hidden');
+    buildKeyboard();
+    renderWord();
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (finished) {
+      if (e.key === 'Enter' || e.key === ' ') nextItem();
+      return;
+    }
+    if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+      onGuess(e.key);
+    }
+  });
+
+  els.next.addEventListener('click', nextItem);
+  els.giveUp.addEventListener('click', giveUp);
+
+  items = ITEMS;
+  queue = shuffle(items);
+  nextItem();
+})();
+  </script>
+</body>
+</html>
