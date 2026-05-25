@@ -55,24 +55,6 @@ body {
   transform: scale(1.1);
 }
 
-.image-card {
-  background: linear-gradient(180deg, var(--card) 0%, var(--card-2) 100%);
-  border-radius: 14px; padding: 8px;
-  display: flex; flex-direction: column; gap: 6px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-}
-.image-wrap {
-  width: 100%; aspect-ratio: 1 / 1;
-  background: radial-gradient(circle at 50% 40%, #2a2f55 0%, #0e1024 80%);
-  border-radius: 10px; display: grid; place-items: center;
-  overflow: hidden; position: relative; padding: 16px;
-}
-#item-image {
-  width: 100%; height: 100%;
-  object-fit: contain;
-  filter: drop-shadow(0 6px 14px rgba(0,0,0,0.5));
-  image-rendering: -webkit-optimize-contrast;
-}
 .image-overlay { position: absolute; inset: 0; pointer-events: none; }
 
 .word-area { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 2px 0; }
@@ -149,20 +131,6 @@ body {
 </head>
 <body>
   <div class="phone">
-    <header class="hud">
-      <div class="stat">
-        <div class="value" id="streak">0</div>
-        <div class="label">STREAK</div>
-      </div>
-    </header>
-
-    <section class="image-card">
-      <div class="image-wrap">
-        <img id="item-image" alt="Item to guess" />
-        <div class="image-overlay" id="image-overlay"></div>
-      </div>
-    </section>
-
     <section class="word-area">
       <div id="word" class="word"></div>
       <div class="meta">
@@ -188,11 +156,9 @@ body {
   const MAX_WRONG = 6;
 
   const els = {
-    img: document.getElementById('item-image'),
     word: document.getElementById('word'),
     keyboard: document.getElementById('keyboard'),
     strikes: document.getElementById('strikes'),
-    streak: document.getElementById('streak'),
     metaHint: document.getElementById('meta-hint'),
     giveUp: document.getElementById('giveup-btn'),
     next: document.getElementById('next-btn'),
@@ -204,7 +170,6 @@ body {
   let revealed = new Set();
   let guessed = new Set();
   let wrong = 0;
-  let streak = 0;
   let finished = false;
 
   function renderStrikes() {
@@ -305,7 +270,7 @@ body {
       wrong++;
       setKeyState(letter, 'miss');
       renderStrikes();
-      if (wrong >= MAX_WRONG) lose();
+      if (wrong >= MAX_WRONG) gameOver();
     }
   }
 
@@ -317,34 +282,45 @@ body {
     });
   }
 
-  function win() {
-    finished = true;
-    streak++;
-    els.streak.textContent = streak;
-    els.metaHint.textContent = 'Correct!';
-    els.metaHint.style.color = 'var(--good)';
-    finishUI();
-  }
-
-  function lose() {
-    finished = true;
-    streak = 0;
-    els.streak.textContent = streak;
+  function revealAnswer() {
     [...uniqueLetters(current.name)].forEach(l => revealed.add(l));
     renderWord();
-    els.metaHint.textContent = current.name;
-    els.metaHint.style.color = 'var(--danger)';
-    finishUI();
+  }
+
+  function win() {
+    finished = true;
+    els.metaHint.textContent = 'Correct!';
+    els.metaHint.style.color = 'var(--good)';
+    finishUI('Next Item ▶', nextItem);
   }
 
   function giveUp() {
     if (finished) return;
-    lose();
+    finished = true;
+    revealAnswer();
+    els.metaHint.textContent = current.name;
+    els.metaHint.style.color = 'var(--danger)';
+    finishUI('Next Item ▶', nextItem);
   }
 
-  function finishUI() {
+  function gameOver() {
+    finished = true;
+    revealAnswer();
+    els.metaHint.textContent = 'Game Over — ' + current.name;
+    els.metaHint.style.color = 'var(--danger)';
+    finishUI('Play Again ⟳', restartGame);
+  }
+
+  function finishUI(label, handler) {
+    els.next.textContent = label;
+    els.next.onclick = handler;
     els.next.classList.remove('hidden');
     els.giveUp.classList.add('hidden');
+  }
+
+  function restartGame() {
+    queue = shuffle(items);
+    nextItem();
   }
 
   function nextItem() {
@@ -357,8 +333,6 @@ body {
     els.metaHint.textContent = 'Type the item name';
     els.metaHint.style.color = '';
     renderStrikes();
-    els.img.src = current.image;
-    els.img.alt = 'Mystery item';
     els.next.classList.add('hidden');
     els.giveUp.classList.remove('hidden');
     buildKeyboard();
@@ -367,7 +341,7 @@ body {
 
   document.addEventListener('keydown', (e) => {
     if (finished) {
-      if (e.key === 'Enter' || e.key === ' ') nextItem();
+      if (e.key === 'Enter' || e.key === ' ') els.next.click();
       return;
     }
     if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
@@ -375,7 +349,6 @@ body {
     }
   });
 
-  els.next.addEventListener('click', nextItem);
   els.giveUp.addEventListener('click', giveUp);
 
   items = ITEMS;
